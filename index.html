@@ -109,8 +109,18 @@
 
         // Setup zoom support
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: selectedDeviceId } }
+          video: {
+            deviceId: { exact: selectedDeviceId },
+            facingMode: "environment", // ✅ Prefer back camera
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            advanced: [
+              { focusMode: "continuous" },  // 🔁 Some Android browsers may honor this
+              { torch: false },             // Prevent flash if auto-enabled
+            ]
+          }
         });
+
         track = stream.getVideoTracks()[0];
         const capabilities = track.getCapabilities();
 
