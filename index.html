@@ -214,11 +214,18 @@
       output.textContent = `正在搜索: ${code}`;
       fetchProduct(code);
     };
-
+    
     async function fetchProduct(barcode) {
       try {
+        const res = await fetch(`https://chinatown-barlookup.123456789sunzheng.workers.dev/?barcode=${encodeURIComponent(barcode)}`);
+        const data = await res.json();
+    
+        if (data.error) {
+          product.innerHTML = `<p>❌ ${data.error}</p>`;
+          return;
+        }
+    
         let stockDisplay = '';
-
         if (data.stock === 0) {
           stockDisplay = `<p><strong>无货</strong></p>`;
         } else if (data.stock === null || isNaN(data.stock)) {
@@ -226,23 +233,18 @@
         } else {
           stockDisplay = `<p><strong>库存:</strong> ${data.stock}</p>`;
         }
-
-        const res = await fetch(`https://chinatown-barlookup.123456789sunzheng.workers.dev/?barcode=${encodeURIComponent(barcode)}`);
-        const data = await res.json();
-        if (data.error) {
-          product.innerHTML = `<p>❌ ${data.error}</p>`;
-        } else {
-          product.innerHTML = `
-            <p><strong>商品名称:</strong> ${data.Pm}</p>
-            <p><strong>价格:</strong> ${data.hyj}/${data.Dw}</p>
-            ${stockDisplay}
-          `;
-        }
+    
+        product.innerHTML = `
+          <p><strong>商品名称:</strong> ${data.Pm}</p>
+          <p><strong>价格:</strong> ${data.hyj}/${data.Dw}</p>
+          ${stockDisplay}
+        `;
       } catch (err) {
         product.innerHTML = `<p>⚠️ 搜寻失败</p>`;
-        console.log(err);
+        console.error(err);
       }
     }
+
 
     window.addEventListener("DOMContentLoaded", populateCameraList);
   </script>
