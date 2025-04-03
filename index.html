@@ -31,11 +31,10 @@
     }
 
     video {
-      transform-origin: center center;
-      transition: transform 0.2s ease-in-out;
       width: 100%;
       height: auto;
       display: block;
+      border-radius: 10px;
     }
 
     select, input[type="text"], button {
@@ -118,6 +117,7 @@
     const product = document.getElementById('product');
     const zoomSlider = document.getElementById('zoomSlider');
     const cameraSelect = document.getElementById('cameraSelect');
+    let track = null;
 
     async function populateCameraList() {
       const devices = await BrowserMultiFormatReader.listVideoInputDevices();
@@ -155,18 +155,32 @@
             deviceId: { exact: selectedDeviceId },
             facingMode: "environment",
             width: { ideal: 1920 },
-            height: { ideal: 1080 }
+            height: { ideal: 1080 },
+            advanced: [
+              { focusMode: "continuous" },
+              { torch: false }
+            ]
           }
         });
 
-        // Fake zoom setup (CSS transform)
-        zoomSlider.oninput = () => {
-          const zoom = parseFloat(zoomSlider.value);
-          video.style.transform = `scale(${zoom})`;
-        };
-
-        zoomSlider.style.display = 'inline-block';
         video.srcObject = stream;
+        track = stream.getVideoTracks()[0];
+        const capabilities = track.getCapabilities();
+
+        if (capabilities.zoom) {
+          zoomSlider.min = capabilities.zoom.min;
+          zoomSlider.max = capabilities.zoom.max;
+          zoomSlider.step = capabilities.zoom.step;
+          zoomSlider.value = capabilities.zoom.min;
+
+          zoomSlider.oninput = () => {
+            const zoomLevel = parseFloat(zoomSlider.value);
+            track.applyConstraints({ advanced: [{ zoom: zoomLevel }] });
+          };
+        } else {
+          zoomSlider.disabled = true;
+          zoomSlider.title = "Zoom not supported on this camera.";
+        }
 
       } catch (err) {
         output.textContent = `❌ ${err.message}`;
