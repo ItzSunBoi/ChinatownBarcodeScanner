@@ -217,6 +217,16 @@
 
     async function fetchProduct(barcode) {
       try {
+        let stockDisplay = '';
+
+        if (data.stock === 0) {
+          stockDisplay = `<p><strong>无货</strong></p>`;
+        } else if (data.stock === null || isNaN(data.stock)) {
+          stockDisplay = `<p><strong>次商品没有库存数据</strong></p>`;
+        } else {
+          stockDisplay = `<p><strong>库存:</strong> ${data.stock}</p>`;
+        }
+
         const res = await fetch(`https://chinatown-barlookup.123456789sunzheng.workers.dev/?barcode=${encodeURIComponent(barcode)}`);
         const data = await res.json();
         if (data.error) {
@@ -225,6 +235,7 @@
           product.innerHTML = `
             <p><strong>商品名称:</strong> ${data.Pm}</p>
             <p><strong>价格:</strong> ${data.hyj}/${data.Dw}</p>
+            ${stockDisplay}
           `;
         }
       } catch (err) {
