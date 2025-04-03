@@ -83,29 +83,29 @@
 </head>
 <body>
 
-  <h1>📦 Chinatown Barcode Scanner</h1>
+  <h1>📦 中国城询价系统</h1>
 
   <select id="cameraSelect">
-    <option value="">Loading cameras...</option>
+    <option value="">摄像头加载中...</option>
   </select>
   <br />
-  <button id="start-btn">Start Scanning</button>
+  <button id="start-btn">开始扫描</button>
 
   <div class="video-container">
     <video id="video" playsinline muted></video>
   </div>
 
   <div>
-    <label for="zoomSlider">🔍 Zoom:</label>
+    <label for="zoomSlider">🔍 放大:</label>
     <input type="range" id="zoomSlider" min="1" max="3" step="0.1" value="1" />
   </div>
 
   <div style="margin-top: 2rem;">
-    <input type="text" id="manualInput" placeholder="Enter barcode manually" />
-    <button onclick="handleManualSearch()">Search</button>
+    <input type="text" id="manualInput" placeholder="手动输入条码" />
+    <button onclick="handleManualSearch()">搜索</button>
   </div>
 
-  <div id="output">Waiting...</div>
+  <div id="output">等待中...</div>
   <div id="product"></div>
 
   <script type="module">
@@ -132,27 +132,27 @@
         for (const device of videoDevices) {
           const option = document.createElement('option');
           option.value = device.deviceId;
-          option.textContent = device.label || `Camera ${cameraSelect.length + 1}`;
+          option.textContent = device.label || `摄像头 ${cameraSelect.length + 1}`;
           cameraSelect.appendChild(option);
         }
     
         if (videoDevices.length === 0) {
-          cameraSelect.innerHTML = '<option value="">❌ No cameras found</option>';
+          cameraSelect.innerHTML = '<option value="">❌ 没有找到可用的摄像头</option>';
         }
     
       } catch (err) {
-        output.textContent = `❌ Camera access denied or unavailable: ${err.message}`;
+        output.textContent = `❌ 摄像头权限拒绝: ${err.message}`;
       }
     }
     
 
     async function startScanning() {
-      output.textContent = "Scanning...";
+      output.textContent = "扫描中...";
       product.innerHTML = "";
 
       const selectedDeviceId = cameraSelect.value;
       if (!selectedDeviceId) {
-        output.textContent = "❌ No camera selected.";
+        output.textContent = "❌ 未选择摄像头.";
         return;
       }
 
@@ -160,7 +160,7 @@
         reader.decodeFromVideoDevice(selectedDeviceId, video, async (result, err, controls) => {
           if (result) {
             const code = result.getText();
-            output.textContent = `✅ Scanned: ${code}`;
+            output.textContent = `✅ 扫到了: ${code}`;
             controls.stop();
             fetchProduct(code);
           }
@@ -195,7 +195,7 @@
           };
         } else {
           zoomSlider.disabled = true;
-          zoomSlider.title = "Zoom not supported on this camera.";
+          zoomSlider.title = "次摄像头不支持放大.";
         }
 
       } catch (err) {
@@ -208,10 +208,10 @@
     window.handleManualSearch = () => {
       const code = document.getElementById('manualInput').value.trim();
       if (!code) {
-        output.textContent = "Please enter a barcode.";
+        output.textContent = "请输入条码.";
         return;
       }
-      output.textContent = `Searching for: ${code}`;
+      output.textContent = `正在搜索: ${code}`;
       fetchProduct(code);
     };
 
@@ -223,13 +223,12 @@
           product.innerHTML = `<p>❌ ${data.error}</p>`;
         } else {
           product.innerHTML = `
-            <p><strong>Name:</strong> ${data.Pm}</p>
-            <p><strong>Unit:</strong> ${data.Dw}</p>
-            <p><strong>Price:</strong> ${data.hyj}</p>
+            <p><strong>商品名称:</strong> ${data.Pm}</p>
+            <p><strong>价格:</strong> ${data.hyj}/${data.Dw}</p>
           `;
         }
       } catch (err) {
-        product.innerHTML = `<p>⚠️ Lookup failed</p>`;
+        product.innerHTML = `<p>⚠️ 搜寻失败</p>`;
       }
     }
 
