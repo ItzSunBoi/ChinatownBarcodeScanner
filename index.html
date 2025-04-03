@@ -18,9 +18,10 @@
       border-radius: 10px;
       margin: 1rem 0;
     }
-    input[type="text"] {
+    select, input[type="text"] {
       padding: 8px;
       font-size: 16px;
+      margin: 0.5rem 0;
       width: 250px;
     }
     button {
@@ -42,6 +43,10 @@
 <body>
   <h1>📦 Chinatown Barcode Scanner</h1>
 
+  <select id="cameraSelect">
+    <option value="">Loading cameras...</option>
+  </select>
+  <br />
   <button id="start-btn">Start Scanning</button>
   <video id="video" playsinline muted></video>
 
@@ -66,45 +71,58 @@
     const output = document.getElementById('output');
     const product = document.getElementById('product');
     const zoomSlider = document.getElementById('zoomSlider');
-
+    const cameraSelect = document.getElementById('cameraSelect');
     let track = null;
 
-    document.getElementById('start-btn').addEventListener('click', async () => {
-      output.textContent = "Initializing camera...";
+    // 🧠 Populate camera select dropdown
+    async function populateCameraList() {
+      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      cameraSelect.innerHTML = '';
+      for (const device of devices) {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.textContent = device.label || `Camera ${cameraSelect.length + 1}`;
+        cameraSelect.appendChild(option);
+      }
+    }
+
+    // 🎬 Start scanning from selected camera
+    async function startScanning() {
+      output.textContent = "Scanning...";
       product.innerHTML = "";
 
-      try {
-        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        if (!devices.length) throw new Error("No camera found");
-        const deviceId = devices[0].deviceId;
+      const selectedDeviceId = cameraSelect.value;
+      if (!selectedDeviceId) {
+        output.textContent = "❌ No camera selected.";
+        return;
+      }
 
-        reader.decodeFromVideoDevice(deviceId, video, async (result, err, controls) => {
+      try {
+        reader.decodeFromVideoDevice(selectedDeviceId, video, async (result, err, controls) => {
           if (result) {
             const code = result.getText();
             output.textContent = `Scanned: ${code}`;
-            controls.stop();  // Stop scanning
+            controls.stop();
             fetchProduct(code);
           }
         });
 
-        // Access track for zoom control
+        // Setup zoom support
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: deviceId } }
+          video: { deviceId: { exact: selectedDeviceId } }
         });
         track = stream.getVideoTracks()[0];
-
         const capabilities = track.getCapabilities();
+
         if (capabilities.zoom) {
           zoomSlider.min = capabilities.zoom.min;
           zoomSlider.max = capabilities.zoom.max;
           zoomSlider.step = capabilities.zoom.step;
           zoomSlider.value = capabilities.zoom.min;
           zoomSlider.style.display = 'inline-block';
-
-          zoomSlider.addEventListener("input", () => {
-            const constraints = { advanced: [{ zoom: parseFloat(zoomSlider.value) }] };
-            track.applyConstraints({ advanced: constraints });
-          });
+          zoomSlider.oninput = () => {
+            track.applyConstraints({ advanced: [{ zoom: parseFloat(zoomSlider.value) }] });
+          };
         } else {
           zoomSlider.style.display = 'none';
         }
@@ -112,7 +130,18 @@
       } catch (err) {
         output.textContent = `❌ ${err.message}`;
       }
-    });
+    }
+
+    document.getElementById('start-btn').addEventListener('click', startScanning);
+    window.handleManualSearch = () => {
+      const code = document.getElementById('manualInput').value.trim();
+      if (!code) {
+        output.textContent = "Please enter a barcode.";
+        return;
+      }
+      output.textContent = `Searching for: ${code}`;
+      fetchProduct(code);
+    };
 
     async function fetchProduct(barcode) {
       try {
@@ -122,9 +151,9 @@
           product.innerHTML = `<p>❌ ${data.error}</p>`;
         } else {
           product.innerHTML = `
-            <p><strong>商品:</strong> ${data.Pm}</p>
-            <p><strong>单位:</strong> ${data.Dw}</p>
-            <p><strong>价格:</strong> ${data.hyj}</p>
+            <p><strong>Name:</strong> ${data.Pm}</p>
+            <p><strong>Unit:</strong> ${data.Dw}</p>
+            <p><strong>Price:</strong> ${data.hyj}</p>
           `;
         }
       } catch (err) {
@@ -132,15 +161,8 @@
       }
     }
 
-    window.handleManualSearch = () => {
-      const manualCode = document.getElementById('manualInput').value.trim();
-      if (!manualCode) {
-        output.textContent = "Please enter a barcode.";
-        return;
-      }
-      output.textContent = `Searching for: ${manualCode}`;
-      fetchProduct(manualCode);
-    };
+    // Load camera list on load
+    window.addEventListener("DOMContentLoaded", populateCameraList);
   </script>
 </body>
 </html>
