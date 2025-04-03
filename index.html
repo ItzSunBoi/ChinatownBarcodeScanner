@@ -5,7 +5,7 @@
   <title>Barcode Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script type="module">
-    import { BrowserMultiFormatReader } from 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.6/+esm';
+    import { BrowserMultiFormatReader } from 'https://cdn.jsdelivr.net/npm/@zxing/browser@latest/+esm';
 
     const reader = new BrowserMultiFormatReader();
     const video = document.getElementById('video');
@@ -35,7 +35,7 @@
 
     async function fetchProduct(barcode) {
       try {
-        const res = await fetch(`https://chinatown-barlookup.YOUR-USER.workers.dev/?barcode=${encodeURIComponent(barcode)}`);
+        const res = await fetch(`https://chinatown-barlookup.123456789sunzheng.workers.dev/?barcode=${encodeURIComponent(barcode)}`);
         const data = await res.json();
         if (data.error) {
           info.innerHTML = `<p>❌ ${data.error}</p>`;
