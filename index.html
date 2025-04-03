@@ -120,15 +120,31 @@
     let track = null;
 
     async function populateCameraList() {
-      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-      cameraSelect.innerHTML = '';
-      for (const device of devices) {
-        const option = document.createElement('option');
-        option.value = device.deviceId;
-        option.textContent = device.label || `Camera ${cameraSelect.length + 1}`;
-        cameraSelect.appendChild(option);
+      try {
+        // Get temporary stream to unlock permissions
+        const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        tempStream.getTracks().forEach(t => t.stop());
+    
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+    
+        cameraSelect.innerHTML = '';
+        for (const device of videoDevices) {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.textContent = device.label || `Camera ${cameraSelect.length + 1}`;
+          cameraSelect.appendChild(option);
+        }
+    
+        if (videoDevices.length === 0) {
+          cameraSelect.innerHTML = '<option value="">❌ No cameras found</option>';
+        }
+    
+      } catch (err) {
+        output.textContent = `❌ Camera access denied or unavailable: ${err.message}`;
       }
     }
+    
 
     async function startScanning() {
       output.textContent = "Scanning...";
