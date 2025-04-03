@@ -3,27 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <title>Barcode Scanner</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
+      background: #f4f4f4;
       padding: 2rem;
-      background: #f0f0f0;
-    }
-    h1 {
-      margin-bottom: 1rem;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      margin-bottom: 1rem;
     }
     video {
       width: 100%;
       max-width: 400px;
-      border-radius: 8px;
       border: 2px solid #ccc;
+      border-radius: 10px;
+      margin: 1rem 0;
+    }
+    input[type="text"] {
+      padding: 8px;
+      font-size: 16px;
+      width: 250px;
+    }
+    button {
+      padding: 8px 16px;
+      font-size: 16px;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+    #zoomSlider {
+      width: 250px;
+      margin-top: 1rem;
     }
     #output, #product {
       margin-top: 1rem;
@@ -33,41 +41,76 @@
 </head>
 <body>
   <h1>📦 Chinatown Barcode Scanner</h1>
+
   <button id="start-btn">Start Scanning</button>
   <video id="video" playsinline muted></video>
+
+  <div>
+    <label for="zoomSlider">🔍 Zoom:</label>
+    <input type="range" id="zoomSlider" min="1" max="3" step="0.1" value="1" />
+  </div>
+
+  <div style="margin-top: 2rem;">
+    <input type="text" id="manualInput" placeholder="Enter barcode manually" />
+    <button onclick="handleManualSearch()">Search</button>
+  </div>
+
   <div id="output">Waiting...</div>
   <div id="product"></div>
 
   <script type="module">
     import { BrowserMultiFormatReader } from 'https://cdn.jsdelivr.net/npm/@zxing/browser@latest/+esm';
 
+    const reader = new BrowserMultiFormatReader();
     const video = document.getElementById('video');
     const output = document.getElementById('output');
     const product = document.getElementById('product');
-    const startBtn = document.getElementById('start-btn');
+    const zoomSlider = document.getElementById('zoomSlider');
 
-    const reader = new BrowserMultiFormatReader();
+    let track = null;
 
-    startBtn.addEventListener('click', async () => {
-      output.textContent = "Scanning...";
+    document.getElementById('start-btn').addEventListener('click', async () => {
+      output.textContent = "Initializing camera...";
       product.innerHTML = "";
 
       try {
         const devices = await BrowserMultiFormatReader.listVideoInputDevices();
         if (!devices.length) throw new Error("No camera found");
-
         const deviceId = devices[0].deviceId;
 
-        await reader.decodeFromVideoDevice(deviceId, video, async (result, error) => {
+        reader.decodeFromVideoDevice(deviceId, video, async (result, err, controls) => {
           if (result) {
             const code = result.getText();
             output.textContent = `Scanned: ${code}`;
-            reader.reset(); // ✅ THIS is how you stop scanning
+            controls.stop();  // Stop scanning
             fetchProduct(code);
           }
         });
+
+        // Access track for zoom control
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: deviceId } }
+        });
+        track = stream.getVideoTracks()[0];
+
+        const capabilities = track.getCapabilities();
+        if (capabilities.zoom) {
+          zoomSlider.min = capabilities.zoom.min;
+          zoomSlider.max = capabilities.zoom.max;
+          zoomSlider.step = capabilities.zoom.step;
+          zoomSlider.value = capabilities.zoom.min;
+          zoomSlider.style.display = 'inline-block';
+
+          zoomSlider.addEventListener("input", () => {
+            const constraints = { advanced: [{ zoom: parseFloat(zoomSlider.value) }] };
+            track.applyConstraints({ advanced: constraints });
+          });
+        } else {
+          zoomSlider.style.display = 'none';
+        }
+
       } catch (err) {
-        output.textContent = `⚠️ ${err.message}`;
+        output.textContent = `❌ ${err.message}`;
       }
     });
 
@@ -75,20 +118,29 @@
       try {
         const res = await fetch(`https://chinatown-barlookup.123456789sunzheng.workers.dev/?barcode=${encodeURIComponent(barcode)}`);
         const data = await res.json();
-
         if (data.error) {
           product.innerHTML = `<p>❌ ${data.error}</p>`;
         } else {
           product.innerHTML = `
-            <p><strong>Name:</strong> ${data.Pm}</p>
-            <p><strong>Unit:</strong> ${data.Dw}</p>
-            <p><strong>Price:</strong> ${data.hyj}</p>
+            <p><strong>商品:</strong> ${data.Pm}</p>
+            <p><strong>单位:</strong> ${data.Dw}</p>
+            <p><strong>价格:</strong> ${data.hyj}</p>
           `;
         }
       } catch (err) {
-        product.innerHTML = `<p>⚠️ Failed to fetch product info</p>`;
+        product.innerHTML = `<p>⚠️ Lookup failed</p>`;
       }
     }
+
+    window.handleManualSearch = () => {
+      const manualCode = document.getElementById('manualInput').value.trim();
+      if (!manualCode) {
+        output.textContent = "Please enter a barcode.";
+        return;
+      }
+      output.textContent = `Searching for: ${manualCode}`;
+      fetchProduct(manualCode);
+    };
   </script>
 </body>
 </html>
