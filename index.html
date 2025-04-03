@@ -195,7 +195,7 @@
           };
         } else {
           zoomSlider.disabled = true;
-          zoomSlider.title = "次摄像头不支持放大.";
+          zoomSlider.title = "此摄像头不支持放大.";
         }
 
       } catch (err) {
@@ -229,7 +229,7 @@
         if (data.stock === 0) {
           stockDisplay = `<p><strong>无货</strong></p>`;
         } else if (data.stock === null || isNaN(data.stock)) {
-          stockDisplay = `<p><strong>次商品没有库存数据</strong></p>`;
+          stockDisplay = `<p><strong>此商品没有库存数据</strong></p>`;
         } else {
           stockDisplay = `<p><strong>库存:</strong> ${data.stock}</p>`;
         }
